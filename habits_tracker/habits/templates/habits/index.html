@@ -16,16 +16,17 @@
 
 {% for habit in today_habits %}
 <div class="ui segment">
-    <p class="ui big header">№{{ habit.habit.id }} {{ habit.habit }}</p>
+    <p class="ui big header">№{{ habit.habit_id }} {{ habit.habit }}</p>
 
     {% if habit.is_completed == False %}
     <span class="ui gray label">Не завершено</span>
-    <a class="ui blue primary  button" href="{% url 'update' habit_id=habit.id %}">Выполнить</a>
+    <a class="ui blue primary button" href="{% url 'update' habit_id=habit.habit_id %}">Выполнить</a>
     {% else %}
-    <span class="ui green label">Завершено</span>
-    <a class="ui basic button" href="{% url 'update' habit_id=habit.id %}">Отменить</a>
+    <span style="width: 102.59px;" class="ui green label">Завершено</span>
+    <a style="width: 122.16px;" class="ui basic button" href="{% url 'update' habit_id=habit.habit_id %}">Отменить</a>
     {% endif %}
     <a class="ui negative basic button" href="{% url 'delete' habit_id=habit.habit.id %}">Удалить</a>
+    <a class="ui  basic button" href="{% url 'show_qr' habit_id=habit.habit.id %}">QR</a>
 </div>
 {% endfor %}
 </div>

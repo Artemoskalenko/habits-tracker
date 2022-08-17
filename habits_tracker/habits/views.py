@@ -34,11 +34,21 @@ def add(request):
     habit.save()
     today_habit = Tracking(habit=habit, day=datetime.date.today())
     today_habit.save()
+    qr = qrcode.make(f'http://127.0.0.1:8000/update/{today_habit.habit_id}/')
+    qr.save(f'media/qr_images/{today_habit.habit_id}.jpg', 'JPEG')
+    habit.qr = f'qr_images/{today_habit.habit_id}.jpg'
+    print(habit.qr)
+    habit.save()
     return redirect('index')
 
 
+def show_qr(request, habit_id):
+    url = f'/media/qr_images/{habit_id}.jpg'
+    return render(request, 'habits/qr.html', {'url': url})
+
+
 def update(request, habit_id):
-    habit = Tracking.objects.get(id=habit_id)
+    habit = Tracking.objects.get(habit_id=habit_id, day=datetime.date.today())
     habit.is_completed = not habit.is_completed
     habit.save()
     return redirect('index')
