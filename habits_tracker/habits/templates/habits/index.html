@@ -12,11 +12,13 @@
             <input type="text" name="name" placeholder="Введите название привычки"><br>
         </div>
         <button class="ui teal basic button" type="submit">Добавить</button>
+        <a class="ui blue right floated primary button" href="{% url 'statistic' %}">Статистика</a>
     </form>
+
 
 {% for habit in today_habits %}
 <div class="ui segment">
-    <p class="ui big header">№{{ habit.habit_id }} {{ habit.habit }}</p>
+    <p class="ui big header">{{ habit.habit }}</p>
 
     {% if habit.is_completed == False %}
     <span class="ui gray label">Не завершено</span>

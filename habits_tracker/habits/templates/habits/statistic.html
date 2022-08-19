@@ -1,0 +1,56 @@
+{% extends 'habits/base.html' %}
+
+{% block content %}
+
+
+
+
+
+
+<div style="margin-top: 50px;margin-bottom: 100px;" class="ui container">
+    <h1 class="ui center aligned header">Трекер привычек</h1>
+    <h3 class="test_style">Статистика привычек за месяц</h3>
+</div>
+<table class="ui definition table">
+
+    <thead>
+        <tr>
+            <th></th>
+            {% for day in days %}
+            <th>{{ day }}</th>
+            {% endfor%}
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for habit_cat in habits_list %}
+        <tr>
+            <td>
+            {{ habit_cat }}
+            </td>
+            {% for habit in month_habits %}
+
+                {% if habit.habit == habit_cat %}
+            <td>
+                {% if habit.is_completed == False %}
+                <a href="{% url 'statistic_update' habit_id=habit.habit_id day=habit.day.day %}"><span style="width: 26px;" class="ui red label">-</span></a>
+                {% else %}
+                <a href="{% url 'statistic_update' habit_id=habit.habit_id day=habit.day.day %}"><span style="width: 26px;" class="ui green label">+</span></a>
+                {% endif %}
+            </td>
+                {% endif %}
+
+            {% endfor %}
+        </tr>
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+<a class="fluid blue ui button" href="{% url 'index' %}">На главную</a>
+
+
+
+
+{% endblock content %}

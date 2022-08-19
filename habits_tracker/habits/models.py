@@ -23,4 +23,9 @@ class Tracking(models.Model):
     is_completed = models.BooleanField('Завершено', default=False)
     day = models.DateField()
 
+    class Meta:
+        verbose_name = "Трэкинг"
+        verbose_name_plural = "Трэкинг"
+        ordering = ['day']
+
 
