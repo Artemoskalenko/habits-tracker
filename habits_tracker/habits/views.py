@@ -16,11 +16,13 @@ def get_today_habits():
     """Получение привычек на день"""
     today_habits = Tracking.objects.filter(day=datetime.date.today())
     if len(today_habits) == 0:
+        objects_list = []
         for d in range(1, monthrange(datetime.datetime.now().year, datetime.datetime.now().month)[1]+1):
             for habit in Habits.objects.all():
-                new_habit = Tracking(habit=habit,
-                                     day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{d}')
-                new_habit.save()
+                objects_list.append(Tracking(habit=habit,
+                                             day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{d}'))
+        Tracking.objects.bulk_create(objects_list)
+
         today_habits = Tracking.objects.filter(day=datetime.date.today())
     return today_habits
 
@@ -61,12 +63,13 @@ def add(request):
     name = request.POST['name']
     habit = Habits(name=name)
     habit.save()
+    objects_list = []
     for d in range(1, monthrange(datetime.datetime.now().year, datetime.datetime.now().month)[1] + 1):
-        today_habit = Tracking(habit=habit, day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{d}')
-        today_habit.save()
-    qr = qrcode.make(f'http://127.0.0.1:8000/update/{today_habit.habit_id}/')
-    qr.save(f'media/qr_images/{today_habit.habit_id}.jpg', 'JPEG')
-    habit.qr = f'qr_images/{today_habit.habit_id}.jpg'
+        objects_list.append(Tracking(habit=habit, day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{d}'))
+    Tracking.objects.bulk_create(objects_list)
+    qr = qrcode.make(f'http://127.0.0.1:8000/update/{habit.id}/')
+    qr.save(f'media/qr_images/{habit.id}.jpg', 'JPEG')
+    habit.qr = f'qr_images/{habit.id}.jpg'
     habit.save()
     return redirect('index')
 

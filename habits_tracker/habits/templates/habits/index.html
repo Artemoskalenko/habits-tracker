@@ -21,7 +21,7 @@
     <p class="ui big header">{{ habit.habit }}</p>
 
     {% if habit.is_completed == False %}
-    <span class="ui gray label">Не завершено</span>
+    <span  class="ui gray label">Не завершено</span>
     <a class="ui blue primary button" href="{% url 'update' habit_id=habit.habit_id %}">Выполнить</a>
     {% else %}
     <span style="width: 102.59px;" class="ui green label">Завершено</span>
