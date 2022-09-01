@@ -2,6 +2,8 @@ from django.http import HttpResponse, HttpResponseNotFound
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.views.generic import ListView,DetailView, CreateView
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 import qrcode
 import datetime
@@ -27,26 +29,31 @@ def get_today_habits():
     return today_habits
 
 
-def index(request):
-    """Главная страница"""
-    today_habits = get_today_habits()
-    context = {'today_habits': today_habits, 'title': 'Главная страница'}
-    return render(request, 'habits/index.html', context=context)
+class HabitsHome(ListView):
+    """Класс представления главной страницы с привычками на сегодня"""
+    model = Tracking
+    template_name = 'habits/index.html'
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['today_habits'] = get_today_habits()
+        context['title'] = 'Главная страница'
+        return context
 
 
-def statistic(request):
+class Statistic(ListView):
     """Страница со статистикой привычек за месяц"""
-    month_habits = Tracking.objects.filter(
-        day__gte=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-01').order_by('habit_id')
-    habits_list = Habits.objects.all()
-    days = list(range(1, monthrange(datetime.datetime.now().year, datetime.datetime.now().month)[1]+1))
-    context = {
-        'month_habits': month_habits,
-        'habits_list': habits_list,
-        'days': days,
-        'title': 'Статистика привычек за месяц'
-    }
-    return render(request, 'habits/statistic.html', context=context)
+    model = Tracking
+    template_name = 'habits/statistic.html'
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['month_habits'] = Tracking.objects.filter(
+            day__gte=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-01').order_by('habit_id')
+        context['habits_list'] = Habits.objects.all()
+        context['days'] = list(range(1, monthrange(datetime.datetime.now().year, datetime.datetime.now().month)[1] + 1))
+        context['title'] = 'Статистика привычек за месяц'
+        return context
 
 
 def show_qr(request, habit_id):
@@ -101,3 +108,6 @@ def delete(request, habit_id):
 
 def pageNotFound(request, exception):
     return HttpResponseNotFound('<h1>Страница не найдена<h1>')
+
+
+# class RegisterUser(DataMixin, CreateView):

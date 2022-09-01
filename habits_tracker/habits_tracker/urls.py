@@ -17,7 +17,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 
-from habits.views import index, pageNotFound
+from habits.views import pageNotFound
 from habits_tracker import settings
 
 urlpatterns = [
