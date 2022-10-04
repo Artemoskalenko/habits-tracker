@@ -1,38 +1,48 @@
+import os
+import qrcode
+import datetime
+from pathlib import Path
+from calendar import monthrange
+
 from django.contrib.auth import logout, login
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import ListView, CreateView
+from django.views.decorators.http import require_http_methods
 from django.http import HttpResponse, HttpResponseNotFound
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.views.generic import ListView, CreateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-
-import qrcode
-import datetime
-from calendar import monthrange
-import os
-from pathlib import Path
 
 from .forms import *
 from .models import *
+from django.conf.global_settings import ALLOWED_HOSTS
+
+
+def _get_days_in_month():
+    days_in_month = monthrange(datetime.datetime.now().year,
+                               datetime.datetime.now().month)[1]
+    return days_in_month
 
 
 def _get_today_habits(user_id):
     """Получение привычек на день"""
     user_habits = Habits.objects.filter(user=user_id)
-    print(user_habits)
-    today_habits = Tracking.objects.filter(day=datetime.date.today(), habit__in=user_habits)
+    today_habits = Tracking.objects.filter(day=datetime.date.today(),
+                                           habit__in=user_habits)
+
     if len(today_habits) == 0:
         objects_list = []
-        for d in range(1, monthrange(datetime.datetime.now().year, datetime.datetime.now().month)[1]+1):
+        for d in range(1, _get_days_in_month() + 1):
             for habit in Habits.objects.filter(user=user_id):
-                objects_list.append(Tracking(habit=habit,
-                                             day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{d}'))
+                day = f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{d}'
+                objects_list.append(Tracking(habit=habit, day=day))
         Tracking.objects.bulk_create(objects_list)
 
-        today_habits = Tracking.objects.filter(day=datetime.date.today(), habit__in=user_habits)
+        today_habits = Tracking.objects.filter(day=datetime.date.today(),
+                                               habit__in=user_habits)
+
     return today_habits
 
 
@@ -63,7 +73,7 @@ class Statistic(LoginRequiredMixin, ListView):
             habit__in=user_habits
         ).order_by('habit_id')
         context['habits_list'] = Habits.objects.filter(user_id=self.request.user.id)
-        context['days'] = list(range(1, monthrange(datetime.datetime.now().year, datetime.datetime.now().month)[1] + 1))
+        context['days'] = list(range(1, _get_days_in_month() + 1))
         context['title'] = 'Статистика привычек за месяц'
         return context
 
@@ -71,7 +81,8 @@ class Statistic(LoginRequiredMixin, ListView):
 @login_required
 def show_qr(request, habit_id):
     """Страница с отображением QR-кода привычки"""
-    context = {'url': f'/media/qr_images/{habit_id}.jpg', 'title': 'QR-код привычки'}
+    context = {'url': f'/media/qr_images/{habit_id}.jpg',
+               'title': 'QR-код привычки'}
     return render(request, 'habits/qr.html', context=context)
 
 
@@ -82,14 +93,20 @@ def add(request):
     """Добавление новой привычки в БД"""
     _get_today_habits(request.user.id)
     name = request.POST['name']
+    if len(name) == 0:
+        return redirect('index')
     user_id = request.user.id
     habit = Habits(name=name, user_id=user_id)
     habit.save()
+
     objects_list = []
-    for d in range(1, monthrange(datetime.datetime.now().year, datetime.datetime.now().month)[1] + 1):
-        objects_list.append(Tracking(habit=habit, day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{d}'))
+    for d in range(1, _get_days_in_month() + 1):
+        objects_list.append(Tracking(
+            habit=habit,
+            day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{d}')
+        )
     Tracking.objects.bulk_create(objects_list)
-    qr = qrcode.make(f'http://127.0.0.1:8000/update/{habit.id}/')
+    qr = qrcode.make(f'http://{ALLOWED_HOSTS}/update/{habit.id}/')
     qr.save(f'media/qr_images/{habit.id}.jpg', 'JPEG')
     habit.qr = f'qr_images/{habit.id}.jpg'
     habit.save()
@@ -109,8 +126,9 @@ def update(request, habit_id):
 @login_required
 def statistic_update(request, habit_id, day):
     """Выполнение или отмена привычки из страницы статистики"""
-    habit = Tracking.objects.get(habit_id=habit_id,
-                                 day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{day}')
+    habit = Tracking.objects.get(
+        habit_id=habit_id,
+        day=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-{day}')
     habit.is_completed = not habit.is_completed
     habit.save()
     return redirect('statistic')
@@ -120,7 +138,8 @@ def statistic_update(request, habit_id, day):
 def delete(request, habit_id):
     """Удаление привычки и соотвествующего QR-кода из БД"""
     habit = Habits.objects.get(id=habit_id)
-    os.remove(str(Path(__file__).resolve().parent.parent) + f'/media/qr_images/{habit_id}.jpg')
+    root_path = str(Path(__file__).resolve().parent.parent)
+    os.remove(root_path + f'/media/qr_images/{habit_id}.jpg')
     habit.delete()
     return redirect('index')
 
