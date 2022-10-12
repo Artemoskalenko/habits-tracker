@@ -30,7 +30,7 @@ def _get_today_habits(user_id):
     """Получение привычек на день"""
     user_habits = Habits.objects.filter(user=user_id)
     today_habits = Tracking.objects.filter(day=datetime.date.today(),
-                                           habit__in=user_habits)
+                                           habit__in=user_habits).select_related('habit')
 
     if len(today_habits) == 0:
         objects_list = []
@@ -71,7 +71,7 @@ class Statistic(LoginRequiredMixin, ListView):
         context['month_habits'] = Tracking.objects.filter(
             day__gte=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-01',
             habit__in=user_habits
-        ).order_by('habit_id')
+        ).select_related('habit').order_by('habit_id')
         context['habits_list'] = Habits.objects.filter(user_id=self.request.user.id)
         context['days'] = list(range(1, _get_days_in_month() + 1))
         context['title'] = 'Статистика привычек за месяц'
