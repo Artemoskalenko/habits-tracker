@@ -28,6 +28,9 @@ class Tracking(models.Model):
     is_completed = models.BooleanField('Завершено', default=False)
     day = models.DateField()
 
+    def __str__(self):
+        return self.habit.name + " " + str(self.day)
+
     class Meta:
         verbose_name = "Трэкинг"
         verbose_name_plural = "Трэкинг"

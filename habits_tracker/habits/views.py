@@ -20,9 +20,15 @@ from .models import *
 from django.conf.global_settings import ALLOWED_HOSTS
 
 
-def _get_days_in_month():
-    days_in_month = monthrange(datetime.datetime.now().year,
-                               datetime.datetime.now().month)[1]
+def _get_days_in_month(num=0):
+    num = int(num)
+    year = datetime.datetime.now().year
+    month = datetime.datetime.now().month - num
+    if month < 1:
+        year -= 1
+        month += 12
+    days_in_month = monthrange(year,
+                               month)[1]
     return days_in_month
 
 
@@ -65,9 +71,55 @@ class Statistic(LoginRequiredMixin, ListView):
     template_name = 'habits/statistic.html'
     login_url = '/login/'
 
+    months = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль',
+              'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь']
+
+    @classmethod
+    def get_previous_month_date(cls, num):
+        year = datetime.datetime.now().year
+        month = datetime.datetime.now().month - num
+        if month < 1:
+            year -= 1
+            month += 12
+        if len(str(month)) == 1:
+            month = "0" + str(month)
+        return f"{year}-{month}-01"
+
+    @classmethod
+    def get_month_name(cls, num):
+        num = int(num)
+        while num < 1:
+            num += 12
+        return cls.months[num - 1]
+
+    @classmethod
+    def get_month_number(cls, num=0):
+        month = datetime.datetime.now().month
+        month_number = month - num
+        while month_number < 1:
+            month_number += 12
+        if len(str(month_number)) == 1:
+            month_number = "0" + str(month_number)
+        return month_number
+
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         user_habits = Habits.objects.filter(user=self.request.user.id)
+
+        completed_months = []
+        month_before_previous = self.get_month_name(
+            datetime.datetime.now().month - 2)
+        if len(Tracking.objects.filter(
+                day=self.get_previous_month_date(2),
+                habit__in=user_habits)) != 0:
+            completed_months.append(month_before_previous)
+        previous_month = self.get_month_name(datetime.datetime.now().month - 1)
+        if len(Tracking.objects.filter(
+                day=self.get_previous_month_date(1),
+                habit__in=user_habits)) != 0:
+            completed_months.append(previous_month)
+        completed_months.append(self.months[self.get_month_number() - 1])
+
         context['month_habits'] = Tracking.objects.filter(
             day__gte=f'{datetime.datetime.now().year}-{datetime.datetime.now().month}-01',
             habit__in=user_habits
@@ -75,6 +127,42 @@ class Statistic(LoginRequiredMixin, ListView):
         context['habits_list'] = Habits.objects.filter(user_id=self.request.user.id)
         context['days'] = list(range(1, _get_days_in_month() + 1))
         context['title'] = 'Статистика привычек за месяц'
+        context['months'] = completed_months
+        return context
+
+
+class StatisticPrevious(Statistic):
+    """Страница со статистикой привычек за предыдущие месяца"""
+    model = Tracking
+    template_name = 'habits/statistic_previous.html'
+    login_url = '/login/'
+
+    def get_statistic(self, days:int, habits):
+        statistic = {}
+        for tracking in habits:
+            if tracking.is_completed:
+                if statistic.get(tracking.habit.name) is None:
+                    statistic[tracking.habit.name] = 1
+                else:
+                    statistic[tracking.habit.name] += 1
+        for h in statistic:
+            statistic[h] = int((statistic[h] / days) * 100)
+        return statistic
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_habits = Habits.objects.filter(user=self.request.user.id)
+
+        month_num = self.get_month_number(self.kwargs["month"])
+        first_day = f'{datetime.datetime.now().year}-{month_num}-01'
+        last_day = f'{datetime.datetime.now().year}-{month_num}-{_get_days_in_month(self.kwargs["month"])}'
+        context['month_habits'] = Tracking.objects.filter(
+            day__range=(first_day, last_day),
+            habit__in=user_habits
+        ).select_related('habit').order_by('habit_id')
+        context['days'] = list(range(1, _get_days_in_month(self.kwargs["month"]) + 1))
+        context['title'] = f'Статистика привычек за {self.get_month_name(month_num)}'
+        context['progress'] = self.get_statistic(_get_days_in_month(self.kwargs["month"]), context['month_habits'])
         return context
 
 
